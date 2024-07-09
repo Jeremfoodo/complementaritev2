@@ -31,14 +31,18 @@ def segmentation_page():
         france_data = download_data(file_urls['France'], output_paths['France'])
         france_data['Date'] = pd.to_datetime(france_data['Date'], errors='coerce')
 
-        st.write("Colonnes dans france_data:", france_data.columns)
+        # Afficher les colonnes disponibles pour le débogage
+        st.write("Colonnes dans france_data avant filtrage:", france_data.columns)
         st.write("Colonnes dans segmentation_data:", segmentation_data.columns)
 
         if selected_zone != 'Toute France':
             france_data = france_data[france_data['region'] == selected_zone]
 
         if selected_category != 'Toutes catégories':
+            st.write("Filtrage par catégorie:", selected_category)
             france_data = france_data[france_data['Product Category'] == selected_category]
+
+        st.write("Colonnes dans france_data après filtrage:", france_data.columns)
 
         if selected_month == 'avril':
             france_data = france_data[france_data['Date'].dt.month == 4]
@@ -48,6 +52,9 @@ def segmentation_page():
             france_data = france_data[france_data['Date'].dt.month == 6]
         elif selected_month == '3 last month':
             france_data = france_data[france_data['Date'].dt.month.isin([4, 5, 6])]
+
+        # Afficher les colonnes disponibles pour le débogage
+        st.write("Colonnes dans france_data avant fusion:", france_data.columns)
 
         # Corrigez les colonnes pour la fusion
         merged_data = france_data.merge(segmentation_data, on='Restaurant_id')
