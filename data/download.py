@@ -1,6 +1,6 @@
 import gdown
 import pandas as pd
-from data.preprocess import load_and_preprocess  # Assurez-vous d'importer cette fonction
+from data.preprocess import load_and_preprocess
 
 def download_data(url, output_path):
     try:
