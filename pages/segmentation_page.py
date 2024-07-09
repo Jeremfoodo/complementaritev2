@@ -36,11 +36,17 @@ def segmentation_page():
         st.write("Colonnes dans segmentation_data:", segmentation_data.columns)
 
         if selected_zone != 'Toute France':
-            france_data = france_data[france_data['region'] == selected_zone]
+            if 'region' in france_data.columns:
+                france_data = france_data[france_data['region'] == selected_zone]
+            else:
+                st.error(f"La colonne 'region' n'existe pas dans france_data")
 
         if selected_category != 'Toutes catégories':
             st.write("Filtrage par catégorie:", selected_category)
-            france_data = france_data[france_data['Product Category'] == selected_category]
+            if 'Product Category' in france_data.columns:
+                france_data = france_data[france_data['Product Category'] == selected_category]
+            else:
+                st.error(f"La colonne 'Product Category' n'existe pas dans france_data")
 
         st.write("Colonnes dans france_data après filtrage:", france_data.columns)
 
@@ -56,14 +62,20 @@ def segmentation_page():
         # Afficher les colonnes disponibles pour le débogage
         st.write("Colonnes dans france_data avant fusion:", france_data.columns)
 
-        # Corrigez les colonnes pour la fusion
-        merged_data = france_data.merge(segmentation_data, on='Restaurant_id')
+        # Vérifiez que 'Restaurant_id' est dans les deux DataFrames avant la fusion
+        if 'Restaurant_id' in france_data.columns and 'Restaurant_id' in segmentation_data.columns:
+            merged_data = france_data.merge(segmentation_data, on='Restaurant_id')
+        else:
+            st.error("La colonne 'Restaurant_id' n'existe pas dans l'un des DataFrames pour la fusion")
 
-        segment_counts = merged_data.groupby(['Gamme', 'Type']).size().unstack(fill_value=0)
+        if not merged_data.empty:
+            segment_counts = merged_data.groupby(['Gamme', 'Type']).size().unstack(fill_value=0)
 
-        plt.figure(figsize=(10, 6))
-        sns.heatmap(segment_counts, annot=True, fmt="d", cmap="YlGnBu")
-        plt.title("Heatmap du nombre de clients pour chaque segment")
-        plt.xlabel("Type")
-        plt.ylabel("Gamme")
-        st.pyplot(plt)
+            plt.figure(figsize=(10, 6))
+            sns.heatmap(segment_counts, annot=True, fmt="d", cmap="YlGnBu")
+            plt.title("Heatmap du nombre de clients pour chaque segment")
+            plt.xlabel("Type")
+            plt.ylabel("Gamme")
+            st.pyplot(plt)
+        else:
+            st.error("Les données fusionnées sont vides. Vérifiez les filtres appliqués.")
