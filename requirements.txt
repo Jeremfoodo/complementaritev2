@@ -5,3 +5,4 @@ mlxtend
 seaborn
 matplotlib
 streamlit-option-menu
+openpyxl
