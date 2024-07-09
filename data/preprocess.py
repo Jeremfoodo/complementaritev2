@@ -1,7 +1,7 @@
 import pandas as pd
 import streamlit as st
 
-@st.cache
+# Désactiver le cache temporairement
 def load_and_preprocess(file_path):
     data = pd.read_excel(file_path, sheet_name='Export')
     data = data[data[data.columns[0]] != "Total"]
@@ -11,6 +11,5 @@ def load_and_preprocess(file_path):
     data['Date'] = pd.to_datetime(data['Date'], errors='coerce')
     return data
 
-@st.cache
 def process_data(data):
     return data.groupby('order_id')['product_name'].apply(list).tolist()
