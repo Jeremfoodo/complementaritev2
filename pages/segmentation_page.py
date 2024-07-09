@@ -66,11 +66,15 @@ def segmentation_page():
         st.write("Échantillon de france_data:", france_data.head())
         st.write("Échantillon de segmentation_data:", segmentation_data.head())
 
-        # Vérifiez que 'Restaurant_id' est dans les deux DataFrames avant la fusion
-        if 'Restaurant_id' in france_data.columns and 'Restaurant_id' in segmentation_data.columns:
-            merged_data = france_data.merge(segmentation_data, on='Restaurant_id')
+        # Renommer les colonnes pour éviter les conflits
+        france_data = france_data.rename(columns={'Restaurant_id': 'france_Restaurant_id'})
+        segmentation_data = segmentation_data.rename(columns={'Restaurant_id': 'segment_Restaurant_id'})
+
+        # Vérifiez que les nouvelles colonnes sont dans les deux DataFrames avant la fusion
+        if 'france_Restaurant_id' in france_data.columns and 'segment_Restaurant_id' in segmentation_data.columns:
+            merged_data = france_data.merge(segmentation_data, left_on='france_Restaurant_id', right_on='segment_Restaurant_id')
         else:
-            st.error("La colonne 'Restaurant_id' n'existe pas dans l'un des DataFrames pour la fusion")
+            st.error("Les colonnes 'france_Restaurant_id' ou 'segment_Restaurant_id' n'existent pas dans l'un des DataFrames pour la fusion")
 
         if not merged_data.empty:
             segment_counts = merged_data.groupby(['Gamme', 'Type']).size().unstack(fill_value=0)
