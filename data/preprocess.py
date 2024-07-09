@@ -1,4 +1,6 @@
 import pandas as pd
+import streamlit as st
+
 
 @st.cache_data
 def load_and_preprocess(file_path):
