@@ -1,8 +1,9 @@
 from mlxtend.preprocessing import TransactionEncoder
 from mlxtend.frequent_patterns import apriori, association_rules
 import pandas as pd
+import streamlit as st
 
-@st.cache_data
+@st.cache
 def apriori_rules(transactions, min_support=0.01, min_lift=1.2):
     encoder = TransactionEncoder()
     onehot = encoder.fit_transform(transactions)
