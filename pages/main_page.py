@@ -8,10 +8,10 @@ def main_page():
     st.title("Analyse de Produits Complémentaires")
 
     file_urls = {
-        'France': 'https://drive.google.com/uc?id=1_qfuH19aLu3JMocit2-wSL-FCmWNet1I',
-        'Belgium': 'https://drive.google.com/uc?id=1IpVNWpAyjDBjprZ3Kl0BYaLaxJHH7wg2',
-        'UK': 'https://drive.google.com/uc?id=1ROT0ide8EQfgcWpXMY6Qnyp5nMKoLt-a',
-        'US': 'https://drive.google.com/uc?id=1l7KRNgouPsx3CiT13j5K2pMYevpuRHqt'
+        'France': 'https://docs.google.com/spreadsheets/d/1_qfuH19aLu3JMocit2-wSL-FCmWNet1I/export?format=xlsx',
+        'Belgium': 'https://docs.google.com/spreadsheets/d/1IpVNWpAyjDBjprZ3Kl0BYaLaxJHH7wg2/export?format=xlsx',
+        'UK': 'https://docs.google.com/spreadsheets/d/1ROT0ide8EQfgcWpXMY6Qnyp5nMKoLt-a/export?format=xlsx',
+        'US': 'https://docs.google.com/spreadsheets/d/1l7KRNgouPsx3CiT13j5K2pMYevpuRHqt/export?format=xlsx'
     }
 
     output_paths = {
@@ -27,8 +27,6 @@ def main_page():
     output_path = output_paths[user_country]
     data = download_data(file_url, output_path)
 
-    st.write("Données chargées :", data.head())
-
     if data.empty:
         st.error("Les données n'ont pas été correctement chargées pour ce pays.")
     else:
@@ -38,15 +36,13 @@ def main_page():
                 'US': ['All US', 'CA', 'NY']
             }
             user_region = st.selectbox("Choisissez la région à analyser :", options=zone_mappings[user_country])
-            if user_region == 'Toute France' ou 'All US':
+            if user_region == 'Toute France' or user_region == 'All US':
                 data_region_selected = data
             else:
                 data_region_selected = data[data['region'] == user_region]
         else:
             user_region = user_country
             data_region_selected = data
-
-        st.write("Données pour la région sélectionnée :", data_region_selected.head())
 
         if data_region_selected.empty:
             st.error("Aucune donnée disponible pour cette région.")
