@@ -74,6 +74,7 @@ def segmentation_page():
         st.write("Échantillon de france_data:", france_data.head())
         st.write("Échantillon de segmentation_data:", segmentation_data.head())
 
+        # Renommer les colonnes pour éviter les conflits
         france_data = france_data.rename(columns={'Restaurant_id': 'france_Restaurant_id'})
         segmentation_data = segmentation_data.rename(columns={'Restaurant_id': 'segment_Restaurant_id'})
 
@@ -83,6 +84,8 @@ def segmentation_page():
         if 'france_Restaurant_id' in france_data.columns and 'segment_Restaurant_id' in segmentation_data.columns:
             try:
                 merged_data = france_data.merge(segmentation_data, left_on='france_Restaurant_id', right_on='segment_Restaurant_id')
+                st.write("Colonnes dans merged_data après fusion:", merged_data.columns)
+                st.write("Échantillon de merged_data:", merged_data.head())
             except Exception as e:
                 st.error(f"Erreur lors de la fusion des données : {e}")
                 return
