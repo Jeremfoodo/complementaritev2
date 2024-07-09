@@ -62,6 +62,10 @@ def segmentation_page():
         # Afficher les colonnes disponibles pour le débogage
         st.write("Colonnes dans france_data avant fusion:", france_data.columns)
 
+        # Afficher quelques échantillons des DataFrames pour le débogage
+        st.write("Échantillon de france_data:", france_data.head())
+        st.write("Échantillon de segmentation_data:", segmentation_data.head())
+
         # Vérifiez que 'Restaurant_id' est dans les deux DataFrames avant la fusion
         if 'Restaurant_id' in france_data.columns and 'Restaurant_id' in segmentation_data.columns:
             merged_data = france_data.merge(segmentation_data, on='Restaurant_id')
