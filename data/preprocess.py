@@ -14,12 +14,3 @@ def load_and_preprocess(file_path):
     except Exception as e:
         print(f"Erreur lors du chargement et du prétraitement des données : {e}")
         return pd.DataFrame()
-
-def process_data(data):
-    try:
-        transactions = data.groupby('order_id')['product_name'].apply(list).tolist()
-        print("Données traitées avec succès")
-        return transactions
-    except Exception as e:
-        print(f"Erreur lors du traitement des données : {e}")
-        return []
