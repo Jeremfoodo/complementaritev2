@@ -1,105 +1,100 @@
 import streamlit as st
-from data.download import download_data, download_segmentation_data
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
+import gdown
 
 def segmentation_page():
     st.title("Segmentation des Clients")
-    
-    segmentation_url = 'https://docs.google.com/spreadsheets/d/1lkxXgC095L0OQdItsGYtisZqVk_nXkPa/export?format=xlsx'
-    segmentation_output_path = 'segmentationFR.xlsx'
-    
-    try:
-        segmentation_data = download_segmentation_data(segmentation_url, segmentation_output_path)
-    except Exception as e:
-        st.error(f"Erreur lors du téléchargement des données de segmentation : {e}")
-        return
 
+    # URLs des fichiers Google Drive
+    segmentation_url = 'https://docs.google.com/spreadsheets/d/1lkxXgC095L0OQdItsGYtisZqVk_nXkPa/export?format=xlsx'
+    achats_url = 'https://docs.google.com/spreadsheets/d/1_qfuH19aLu3JMocit2-wSL-FCmWNet1I/export?format=xlsx'
+
+    # Chemins des fichiers téléchargés
+    segmentation_output_path = 'segmentationFR.xlsx'
+    achats_output_path = 'dataFR.xlsx'
+
+    # Télécharger les données de segmentation
+    gdown.download(segmentation_url, segmentation_output_path, quiet=False)
+
+    # Télécharger les données d'achats
+    gdown.download(achats_url, achats_output_path, quiet=False)
+
+    # Charger les données de segmentation
+    segmentation_data = pd.read_excel(segmentation_output_path)
+
+    # Charger les données d'achats
+    achats_data = pd.read_excel(achats_output_path, sheet_name='Export')
+    achats_data['Date'] = pd.to_datetime(achats_data['Date'], errors='coerce')
+
+    # Sélections interactives
     zones = ['Toute France', 'Paris', 'Paris EST', 'Paris Ouest', 'Province']
     selected_zone = st.selectbox("Choisissez la zone :", options=zones)
 
     categories = ['Fruits et Légumes', 'Boucherie', 'Epicerie salée', 'Crémerie', 'Toutes catégories']
     selected_category = st.selectbox("Choisissez la catégorie :", options=categories)
 
-    months = ['avril', 'mai', 'juin', '3 last month']
+    months = ['janvier', 'février', 'mars', 'avril', '3 last month']
     selected_month = st.selectbox("Choisissez le mois :", options=months)
 
     if st.button("Lancer l'analyse"):
-        file_urls = {
-            'France': 'https://docs.google.com/spreadsheets/d/1_qfuH19aLu3JMocit2-wSL-FCmWNet1I/export?format=xlsx'
-        }
-        output_paths = {
-            'France': 'dataFR.xlsx'
-        }
-
-        try:
-            france_data = download_data(file_urls['France'], output_paths['France'])
-        except Exception as e:
-            st.error(f"Erreur lors du téléchargement des données de France : {e}")
-            return
-
-        france_data['Date'] = pd.to_datetime(france_data['Date'], errors='coerce')
-
-        st.write("Colonnes dans france_data avant filtrage:", france_data.columns)
-        st.write("Colonnes dans segmentation_data:", segmentation_data.columns)
-
+        # Filtrer les données d'achats
         if selected_zone != 'Toute France':
-            if 'region' in france_data.columns:
-                france_data = france_data[france_data['region'] == selected_zone]
-            else:
-                st.error(f"La colonne 'region' n'existe pas dans france_data")
-                return
+            achats_data = achats_data[achats_data['region'] == selected_zone]
 
         if selected_category != 'Toutes catégories':
-            st.write("Filtrage par catégorie:", selected_category)
-            if 'Product Category' in france_data.columns:
-                france_data = france_data[france_data['Product Category'] == selected_category]
-            else:
-                st.error(f"La colonne 'Product Category' n'existe pas dans france_data")
-                return
+            achats_data = achats_data[achats_data['Product Category'] == selected_category]
 
-        st.write("Colonnes dans france_data après filtrage:", france_data.columns)
-
-        if selected_month == 'avril':
-            france_data = france_data[france_data['Date'].dt.month == 4]
-        elif selected_month == 'mai':
-            france_data = france_data[france_data['Date'].dt.month == 5]
-        elif selected_month == 'juin':
-            france_data = france_data[france_data['Date'].dt.month == 6]
+        if selected_month == 'janvier':
+            achats_data = achats_data[achats_data['Date'].dt.month == 1]
+        elif selected_month == 'février':
+            achats_data = achats_data[achats_data['Date'].dt.month == 2]
+        elif selected_month == 'mars':
+            achats_data = achats_data[achats_data['Date'].dt.month == 3]
+        elif selected_month == 'avril':
+            achats_data = achats_data[achats_data['Date'].dt.month == 4]
         elif selected_month == '3 last month':
-            france_data = france_data[france_data['Date'].dt.month.isin([4, 5, 6])]
+            achats_data = achats_data[achats_data['Date'].dt.month.isin([1, 2, 3, 4])]
 
-        st.write("Colonnes dans france_data avant fusion:", france_data.columns)
-        st.write("Échantillon de france_data:", france_data.head())
-        st.write("Échantillon de segmentation_data:", segmentation_data.head())
+        # Fusionner les données d'achats avec les données de segmentation
+        data_merged = pd.merge(achats_data, segmentation_data, on='Restaurant_id', how='left')
 
-        france_data = france_data.rename(columns={'Restaurant_id': 'france_Restaurant_id'})
-        segmentation_data = segmentation_data.rename(columns={'Restaurant_id': 'segment_Restaurant_id'})
+        # Renommer les valeurs de gamme pour une meilleure lisibilité
+        gamme_mapping = {1: 'à emporter', 2: 'regular', 3: 'chic'}
+        data_merged['Gamme'] = data_merged['Gamme'].replace(gamme_mapping)
 
-        st.write("Colonnes dans france_data après renommage:", france_data.columns)
-        st.write("Colonnes dans segmentation_data après renommage:", segmentation_data.columns)
+        # Préparer les données pour les heatmaps
+        fig, axes = plt.subplots(1, 3, figsize=(18, 6))  # Inclure 3 heatmaps
 
-        if 'france_Restaurant_id' in france_data.columns and 'segment_Restaurant_id' in segmentation_data.columns:
-            try:
-                merged_data = france_data.merge(segmentation_data, left_on='france_Restaurant_id', right_on='segment_Restaurant_id')
-                st.write("Colonnes dans merged_data après fusion:", merged_data.columns)
-                st.write("Échantillon de merged_data:", merged_data.head())
-            except Exception as e:
-                st.error(f"Erreur lors de la fusion des données : {e}")
-                return
-        else:
-            st.error("Les colonnes 'france_Restaurant_id' ou 'segment_Restaurant_id' n'existent pas dans l'un des DataFrames pour la fusion")
-            return
+        # Nombre de clients par segment
+        clients_par_segment = data_merged.groupby(['Gamme', 'Type'])['Restaurant_id'].nunique()
+        sns.heatmap(clients_par_segment.unstack(fill_value=0), annot=True, fmt="d", cmap='Blues', cbar_kws={'label': 'Nombre de Clients'},
+                    linecolor='black', linewidths=.5, ax=axes[0])
+        axes[0].set_title('Nombre de Clients par Segment')
+        axes[0].set_xlabel('Type de Cuisine')
+        axes[0].set_ylabel('Gamme')
 
-        if not merged_data.empty:
-            segment_counts = merged_data.groupby(['Gamme', 'Type']).size().unstack(fill_value=0)
+        # Pourcentage de clients par segment
+        total_clients = data_merged['Restaurant_id'].nunique()
+        pourcentage_clients_par_segment = (clients_par_segment / total_clients * 100).fillna(0)
+        sns.heatmap(pourcentage_clients_par_segment.unstack(fill_value=0), annot=True, fmt=".0f", cmap='Greens', cbar_kws={'label': '% du Total de Clients'},
+                    linecolor='black', linewidths=.5, ax=axes[1])
+        axes[1].set_title('% de Clients par Segment')
+        axes[1].set_xlabel('Type de Cuisine')
+        axes[1].set_ylabel('Gamme')
 
-            plt.figure(figsize=(10, 6))
-            sns.heatmap(segment_counts, annot=True, fmt="d", cmap="YlGnBu")
-            plt.title("Heatmap du nombre de clients pour chaque segment")
-            plt.xlabel("Type")
-            plt.ylabel("Gamme")
-            st.pyplot(plt)
-        else:
-            st.error("Les données fusionnées sont vides. Vérifiez les filtres appliqués.")
+        # GMV totale par segment
+        gmv_par_segment = data_merged.groupby(['Gamme', 'Type'])['GMV WITH TAX'].sum().fillna(0).round(0).astype(int)
+        sns.heatmap(gmv_par_segment.unstack(fill_value=0), annot=True, fmt="d", cmap='Reds', cbar_kws={'label': 'GMV Totale par Segment'},
+                    linecolor='black', linewidths=.5, ax=axes[2])
+        axes[2].set_title('GMV Totale par Segment')
+        axes[2].set_xlabel('Type de Cuisine')
+        axes[2].set_ylabel('Gamme')
+
+        # Afficher le texte
+        st.markdown('<h1 style="font-size: 16px;"><br> Heatmap montrant au global le nombre de clients que nous avons et leur GMV en France . </h1>', unsafe_allow_html=True)
+        st.markdown('<h1 style="font-size: 12px;"> <br>A noter, ces données sont pour le moment uniquement basées sur les clients actifs en Janvier à Paris, Province et Paris Ouest. Les données de Paris Est seront bientot ajoutées. Cela n\'empeche que les pourcentages sont assez représentatifs . </h1>', unsafe_allow_html=True)
+
+        plt.tight_layout()
+        st.pyplot(fig)
