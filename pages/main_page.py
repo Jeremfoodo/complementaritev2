@@ -8,10 +8,10 @@ def main_page():
     st.title("Analyse de Produits Complémentaires")
 
     file_urls = {
-        'France': 'https://docs.google.com/spreadsheets/d/1_qfuH19aLu3JMocit2-wSL-FCmWNet1I/export?format=xlsx',
-        'Belgium': 'https://docs.google.com/spreadsheets/d/1IpVNWpAyjDBjprZ3Kl0BYaLaxJHH7wg2/export?format=xlsx',
-        'UK': 'https://docs.google.com/spreadsheets/d/1ROT0ide8EQfgcWpXMY6Qnyp5nMKoLt-a/export?format=xlsx',
-        'US': 'https://docs.google.com/spreadsheets/d/1l7KRNgouPsx3CiT13j5K2pMYevpuRHqt/export?format=xlsx'
+        'France': 'https://drive.google.com/uc?id=1_qfuH19aLu3JMocit2-wSL-FCmWNet1I',
+        'Belgium': 'https://drive.google.com/uc?id=1IpVNWpAyjDBjprZ3Kl0BYaLaxJHH7wg2',
+        'UK': 'https://drive.google.com/uc?id=1ROT0ide8EQfgcWpXMY6Qnyp5nMKoLt-a',
+        'US': 'https://drive.google.com/uc?id=1l7KRNgouPsx3CiT13j5K2pMYevpuRHqt'
     }
 
     output_paths = {
@@ -38,7 +38,7 @@ def main_page():
                 'US': ['All US', 'CA', 'NY']
             }
             user_region = st.selectbox("Choisissez la région à analyser :", options=zone_mappings[user_country])
-            if user_region == 'Toute France' or user_region == 'All US':
+            if user_region == 'Toute France' ou 'All US':
                 data_region_selected = data
             else:
                 data_region_selected = data[data['region'] == user_region]
