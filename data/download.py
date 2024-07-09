@@ -1,19 +1,13 @@
 import gdown
 import pandas as pd
-from data.preprocess import load_and_preprocess
+import streamlit as st
 
+@st.cache_data
 def download_data(url, output_path):
-    try:
-        gdown.download(url, output_path, quiet=False)
-        return load_and_preprocess(output_path)
-    except Exception as e:
-        print(f"Erreur lors du téléchargement des données : {e}")
-        return pd.DataFrame()
+    gdown.download(url, output_path, quiet=True)
+    return load_and_preprocess(output_path)
 
+@st.cache_data
 def download_segmentation_data(url, output_path):
-    try:
-        gdown.download(url, output_path, quiet=False)
-        return pd.read_excel(output_path)
-    except Exception as e:
-        print(f"Erreur lors du téléchargement des données de segmentation : {e}")
-        return pd.DataFrame()
+    gdown.download(url, output_path, quiet=True)
+    return pd.read_excel(output_path)
