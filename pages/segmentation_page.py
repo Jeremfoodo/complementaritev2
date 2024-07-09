@@ -75,4 +75,31 @@ def segmentation_page():
         st.write("Échantillon de segmentation_data:", segmentation_data.head())
 
         france_data = france_data.rename(columns={'Restaurant_id': 'france_Restaurant_id'})
-        segmentation_data = segmentation_data.rename(columns={'Restaurant_id
+        segmentation_data = segmentation_data.rename(columns={'Restaurant_id': 'segment_Restaurant_id'})
+
+        st.write("Colonnes dans france_data après renommage:", france_data.columns)
+        st.write("Colonnes dans segmentation_data après renommage:", segmentation_data.columns)
+
+        if 'france_Restaurant_id' in france_data.columns and 'segment_Restaurant_id' in segmentation_data.columns:
+            try:
+                merged_data = france_data.merge(segmentation_data, left_on='france_Restaurant_id', right_on='segment_Restaurant_id')
+                st.write("Colonnes dans merged_data après fusion:", merged_data.columns)
+                st.write("Échantillon de merged_data:", merged_data.head())
+            except Exception as e:
+                st.error(f"Erreur lors de la fusion des données : {e}")
+                return
+        else:
+            st.error("Les colonnes 'france_Restaurant_id' ou 'segment_Restaurant_id' n'existent pas dans l'un des DataFrames pour la fusion")
+            return
+
+        if not merged_data.empty:
+            segment_counts = merged_data.groupby(['Gamme', 'Type']).size().unstack(fill_value=0)
+
+            plt.figure(figsize=(10, 6))
+            sns.heatmap(segment_counts, annot=True, fmt="d", cmap="YlGnBu")
+            plt.title("Heatmap du nombre de clients pour chaque segment")
+            plt.xlabel("Type")
+            plt.ylabel("Gamme")
+            st.pyplot(plt)
+        else:
+            st.error("Les données fusionnées sont vides. Vérifiez les filtres appliqués.")
