@@ -9,7 +9,12 @@ def segmentation_page():
     
     segmentation_url = 'https://docs.google.com/spreadsheets/d/1lkxXgC095L0OQdItsGYtisZqVk_nXkPa/export?format=xlsx'
     segmentation_output_path = 'segmentationFR.xlsx'
-    segmentation_data = download_segmentation_data(segmentation_url, segmentation_output_path)
+    
+    try:
+        segmentation_data = download_segmentation_data(segmentation_url, segmentation_output_path)
+    except Exception as e:
+        st.error(f"Erreur lors du téléchargement des données de segmentation : {e}")
+        return
 
     zones = ['Toute France', 'Paris', 'Paris EST', 'Paris Ouest', 'Province']
     selected_zone = st.selectbox("Choisissez la zone :", options=zones)
@@ -28,10 +33,14 @@ def segmentation_page():
             'France': 'dataFR.xlsx'
         }
 
-        france_data = download_data(file_urls['France'], output_paths['France'])
+        try:
+            france_data = download_data(file_urls['France'], output_paths['France'])
+        except Exception as e:
+            st.error(f"Erreur lors du téléchargement des données de France : {e}")
+            return
+
         france_data['Date'] = pd.to_datetime(france_data['Date'], errors='coerce')
 
-        # Afficher les colonnes disponibles pour le débogage
         st.write("Colonnes dans france_data avant filtrage:", france_data.columns)
         st.write("Colonnes dans segmentation_data:", segmentation_data.columns)
 
@@ -40,6 +49,7 @@ def segmentation_page():
                 france_data = france_data[france_data['region'] == selected_zone]
             else:
                 st.error(f"La colonne 'region' n'existe pas dans france_data")
+                return
 
         if selected_category != 'Toutes catégories':
             st.write("Filtrage par catégorie:", selected_category)
@@ -47,6 +57,7 @@ def segmentation_page():
                 france_data = france_data[france_data['Product Category'] == selected_category]
             else:
                 st.error(f"La colonne 'Product Category' n'existe pas dans france_data")
+                return
 
         st.write("Colonnes dans france_data après filtrage:", france_data.columns)
 
@@ -59,22 +70,25 @@ def segmentation_page():
         elif selected_month == '3 last month':
             france_data = france_data[france_data['Date'].dt.month.isin([4, 5, 6])]
 
-        # Afficher les colonnes disponibles pour le débogage
         st.write("Colonnes dans france_data avant fusion:", france_data.columns)
-
-        # Afficher quelques échantillons des DataFrames pour le débogage
         st.write("Échantillon de france_data:", france_data.head())
         st.write("Échantillon de segmentation_data:", segmentation_data.head())
 
-        # Renommer les colonnes pour éviter les conflits
         france_data = france_data.rename(columns={'Restaurant_id': 'france_Restaurant_id'})
         segmentation_data = segmentation_data.rename(columns={'Restaurant_id': 'segment_Restaurant_id'})
 
-        # Vérifiez que les nouvelles colonnes sont dans les deux DataFrames avant la fusion
+        st.write("Colonnes dans france_data après renommage:", france_data.columns)
+        st.write("Colonnes dans segmentation_data après renommage:", segmentation_data.columns)
+
         if 'france_Restaurant_id' in france_data.columns and 'segment_Restaurant_id' in segmentation_data.columns:
-            merged_data = france_data.merge(segmentation_data, left_on='france_Restaurant_id', right_on='segment_Restaurant_id')
+            try:
+                merged_data = france_data.merge(segmentation_data, left_on='france_Restaurant_id', right_on='segment_Restaurant_id')
+            except Exception as e:
+                st.error(f"Erreur lors de la fusion des données : {e}")
+                return
         else:
             st.error("Les colonnes 'france_Restaurant_id' ou 'segment_Restaurant_id' n'existent pas dans l'un des DataFrames pour la fusion")
+            return
 
         if not merged_data.empty:
             segment_counts = merged_data.groupby(['Gamme', 'Type']).size().unstack(fill_value=0)
