@@ -13,8 +13,9 @@ def segmentation_page():
     selected_zone = st.selectbox("Choisissez la zone :", options=zones)
     categories = ['Fruits et Légumes', 'Boucherie', 'Epicerie salée', 'Crémerie', 'Toutes catégories']
     selected_category = st.selectbox("Choisissez la catégorie :", options=categories)
-    months = ['avril', 'mai', 'juin', '3 last month']
+    months = ['avril', 'mai', 'juin', 'juillet', '3 last months']
     selected_month = st.selectbox("Choisissez le mois :", options=months)
+    
     if st.button("Lancer l'analyse"):
         file_urls = {
             'France': 'https://docs.google.com/spreadsheets/d/1_qfuH19aLu3JMocit2-wSL-FCmWNet1I/export?format=xlsx'
@@ -26,18 +27,27 @@ def segmentation_page():
         france_data['Date'] = pd.to_datetime(france_data['Date'], errors='coerce')
         st.write("Colonnes dans france_data:", france_data.columns)
         st.write("Colonnes dans segmentation_data:", segmentation_data.columns)
+        
         if selected_zone != 'Toute France':
             france_data = france_data[france_data['region'] == selected_zone]
         if selected_category != 'Toutes catégories':
             france_data = france_data[france_data['Product Category'] == selected_category]
+        
         if selected_month == 'avril':
             france_data = france_data[france_data['Date'].dt.month == 4]
         elif selected_month == 'mai':
             france_data = france_data[france_data['Date'].dt.month == 5]
         elif selected_month == 'juin':
             france_data = france_data[france_data['Date'].dt.month == 6]
-        elif selected_month == '3 last month':
-            france_data = france_data[france_data['Date'].dt.month.isin([4, 5, 6])]
+        elif selected_month == 'juillet':
+            france_data = france_data[france_data['Date'].dt.month == 7]
+        elif selected_month == '3 last months':
+            available_months = france_data['Date'].dt.month.unique()
+            if 7 in available_months:
+                france_data = france_data[france_data['Date'].dt.month.isin([5, 6, 7])]
+            else:
+                france_data = france_data[france_data['Date'].dt.month.isin([4, 5, 6])]
+
         merged_data = france_data.merge(segmentation_data, left_on='client_id', right_on='Restaurant_id')
         segment_counts = merged_data.groupby(['Gamme', 'Type']).size().unstack(fill_value=0)
         plt.figure(figsize=(10, 6))
@@ -46,3 +56,7 @@ def segmentation_page():
         plt.xlabel("Type")
         plt.ylabel("Gamme")
         st.pyplot(plt)
+
+# Assurez-vous d'exécuter la fonction pour afficher la page de segmentation
+if __name__ == '__main__':
+    segmentation_page()
