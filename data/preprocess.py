@@ -2,7 +2,7 @@ import pandas as pd
 
 def load_and_preprocess(file_path):
     try:
-        data = pd.read_excel(file_path, sheet_name='Export')
+        data = pd.read_excel(file_path, sheet_name='Export', engine='openpyxl')
         print("Données chargées avec succès")
         data = data[data[data.columns[0]] != "Total"]
         data = data.dropna(subset=[data.columns[0]])
