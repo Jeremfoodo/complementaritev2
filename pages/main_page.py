@@ -8,7 +8,7 @@ def main_page():
     st.title("Analyse de Produits Complémentaires")
 
     file_urls = {
-        'France': 'https://drive.google.com/uc?id=1_qfuH19aLu3JMocit2-wSL-FCmWNet1I',
+        'France': 'https://drive.google.com/uc?id=1sv6E1UsMV3fe-T_3p94uAUt1kz4xlXZA',
         'Belgium': 'https://drive.google.com/uc?id=1IpVNWpAyjDBjprZ3Kl0BYaLaxJHH7wg2',
         'UK': 'https://drive.google.com/uc?id=1ROT0ide8EQfgcWpXMY6Qnyp5nMKoLt-a',
         'US': 'https://drive.google.com/uc?id=1l7KRNgouPsx3CiT13j5K2pMYevpuRHqt'
