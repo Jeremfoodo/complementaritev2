@@ -2,8 +2,18 @@ import pandas as pd
 
 def load_and_preprocess(file_path):
     try:
+        # Charger les données depuis le fichier Excel
         data = pd.read_excel(file_path, sheet_name='Export', engine='openpyxl')
         print("Données chargées avec succès")
+        
+        # Gérer les cas où les colonnes sont manquantes
+        required_columns = ['GMV', 'Date']
+        missing_columns = [col for col in required_columns if col not in data.columns]
+        if missing_columns:
+            print(f"Colonnes manquantes dans {file_path}: {missing_columns}")
+            return pd.DataFrame()
+        
+        # Prétraitement des données
         data = data[data[data.columns[0]] != "Total"]
         data = data.dropna(subset=[data.columns[0]])
         data = data[~data[data.columns[0]].astype(str).str.startswith("Filtres")]
