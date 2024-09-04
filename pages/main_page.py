@@ -8,14 +8,14 @@ def main_page():
     st.title("Analyse de Produits Complémentaires")
 
     file_urls = {
-        'France': 'https://drive.google.com/uc?id=1sv6E1UsMV3fe-T_3p94uAUt1kz4xlXZA',
+        'FR': 'https://drive.google.com/uc?id=1sv6E1UsMV3fe-T_3p94uAUt1kz4xlXZA',
         'Belgium': 'https://drive.google.com/uc?id=1fqu_YgsovkDrpqV7OsFStusEvM-9axRg',
         'UK': 'https://drive.google.com/uc?id=1ROT0ide8EQfgcWpXMY6Qnyp5nMKoLt-a',
         'US': 'https://drive.google.com/uc?id=1HsxBxGpq3lSwJKPALDsDNvJXNi6us2j-'
     }
 
     output_paths = {
-        'France': 'dataFR.xlsx',
+        'FR': 'dataFR.xlsx',
         'Belgium': 'dataBE.xlsx',
         'UK': 'dataUK.xlsx',
         'US': 'dataUS.xlsx'
@@ -43,9 +43,9 @@ def main_page():
         st.error(f"Les colonnes suivantes sont manquantes : {', '.join(missing_columns)}")
         return
 
-    if user_country in ['France', 'US']:
+    if user_country in ['FR', 'US']:
         zone_mappings = {
-            'France': ['Toute France', 'Paris', 'Paris EST', 'Paris Ouest', 'Province'],
+            'FR': ['Toute France', 'Paris', 'Paris EST', 'Paris Ouest', 'Province'],
             'US': ['All US', 'CA', 'NY']
         }
         user_region = st.selectbox("Choisissez la région à analyser :", options=zone_mappings[user_country])
