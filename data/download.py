@@ -6,6 +6,12 @@ def download_data(url, output_path):
     try:
         gdown.download(url, output_path, quiet=False)
         print(f"Données téléchargées avec succès à {output_path}")
+        
+        # Vérifier si le fichier existe et n'est pas vide
+        if pd.read_excel(output_path).empty:
+            print(f"Le fichier {output_path} est vide ou corrompu.")
+            return pd.DataFrame()
+        
         data = load_and_preprocess(output_path)
         print("Données chargées et prétraitées avec succès")
         return data
