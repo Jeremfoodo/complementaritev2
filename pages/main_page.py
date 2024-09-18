@@ -3,6 +3,7 @@ from data.download import download_data
 from data.preprocess import load_and_preprocess, process_data
 from utils.apriori_analysis import apriori_rules
 import pandas as pd
+import openpyxl
 
 def main_page():
     st.title("Analyse de Produits Complémentaires")
