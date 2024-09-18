@@ -1,7 +1,7 @@
 import streamlit as st
 from streamlit_option_menu import option_menu
-from pages.main_page import main_page
-from pages.segmentation_page import segmentation_page
+from main_page import main_page
+from segmentation_page import segmentation_page
 
 # Créer le menu de navigation
 selected_page = option_menu(
