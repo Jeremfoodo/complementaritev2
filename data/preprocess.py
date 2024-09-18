@@ -1,4 +1,5 @@
 import pandas as pd
+import openpyxl
 
 def load_and_preprocess(file_path):
     try:
