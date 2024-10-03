@@ -4,6 +4,15 @@ import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
 
+# Fonction avec cache pour éviter de télécharger plusieurs fois
+@st.cache_data
+def get_segmentation_data(segmentation_url, segmentation_output_path):
+    return download_segmentation_data(segmentation_url, segmentation_output_path)
+
+@st.cache_data
+def get_country_data(file_url, output_path):
+    return download_data(file_url, output_path)
+
 def segmentation_page():
     st.title("Segmentation des Clients")
     
@@ -11,8 +20,8 @@ def segmentation_page():
     segmentation_url = 'https://docs.google.com/spreadsheets/d/1Vv7n3pj3J7xDbsizmdWyw2ZF3oVQNBfu/export?format=xlsx'
     segmentation_output_path = 'segmentation_all.xlsx'
     
-    # Téléchargement des données de segmentation
-    segmentation_data = download_segmentation_data(segmentation_url, segmentation_output_path)
+    # Téléchargement des données de segmentation (utilisation du cache)
+    segmentation_data = get_segmentation_data(segmentation_url, segmentation_output_path)
 
     # Liste des pays disponibles
     countries = ['France', 'Belgique', 'US', 'UK']
@@ -46,8 +55,8 @@ def segmentation_page():
             'UK': 'dataUK.xlsx'
         }
         
-        # Téléchargement des données pour le pays sélectionné
-        country_data = download_data(file_urls[selected_country], output_paths[selected_country])
+        # Téléchargement des données pour le pays sélectionné (utilisation du cache)
+        country_data = get_country_data(file_urls[selected_country], output_paths[selected_country])
         country_data['Date'] = pd.to_datetime(country_data['Date'], errors='coerce')
 
         # Filtrage par zone et catégorie si nécessaire
@@ -63,7 +72,7 @@ def segmentation_page():
         elif selected_month == '3 derniers mois':
             available_months = country_data['Date'].dt.month.unique()
             country_data = country_data[country_data['Date'].dt.month.isin(sorted(available_months)[-3:])]
-        
+
         # Fusion des données avec la segmentation
         merged_data = country_data.merge(segmentation_data, left_on='Restaurant_id', right_on='Restaurant_id')
         segment_counts = merged_data.groupby(['Gamme', 'Type']).size().unstack(fill_value=0)
