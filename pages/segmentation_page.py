@@ -75,15 +75,21 @@ def segmentation_page():
 
         # Fusion des données avec la segmentation
         merged_data = country_data.merge(segmentation_data, left_on='Restaurant_id', right_on='Restaurant_id')
-        segment_counts = merged_data.groupby(['Gamme', 'Type']).size().unstack(fill_value=0)
+
+        # Ne garder que les clients uniques
+        unique_clients_data = merged_data.drop_duplicates(subset=['Restaurant_id'])
+
+        # Comptage des segments basés sur les clients uniques
+        segment_counts = unique_clients_data.groupby(['Gamme', 'Type']).size().unstack(fill_value=0)
 
         # Génération d'un heatmap pour afficher les segments
         plt.figure(figsize=(10, 6))
         sns.heatmap(segment_counts, annot=True, fmt="d", cmap="YlGnBu")
-        plt.title("Heatmap du nombre de clients pour chaque segment")
+        plt.title("Heatmap du nombre de clients uniques pour chaque segment")
         plt.xlabel("Type")
         plt.ylabel("Gamme")
         st.pyplot(plt)
+
 
 # Assurez-vous d'exécuter la fonction pour afficher la page de segmentation
 if __name__ == '__main__':
