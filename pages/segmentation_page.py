@@ -65,7 +65,7 @@ def segmentation_page():
             country_data = country_data[country_data['Date'].dt.month.isin(sorted(available_months)[-3:])]
         
         # Fusion des données avec la segmentation
-        merged_data = country_data.merge(segmentation_data, left_on='client_id', right_on='Restaurant_id')
+        merged_data = country_data.merge(segmentation_data, left_on='Restaurant_id', right_on='Restaurant_id')
         segment_counts = merged_data.groupby(['Gamme', 'Type']).size().unstack(fill_value=0)
 
         # Génération d'un heatmap pour afficher les segments
