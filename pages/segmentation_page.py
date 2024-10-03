@@ -6,50 +6,69 @@ import matplotlib.pyplot as plt
 
 def segmentation_page():
     st.title("Segmentation des Clients")
-    segmentation_url = 'https://docs.google.com/spreadsheets/d/1lkxXgC095L0OQdItsGYtisZqVk_nXkPa/export?format=xlsx'
-    segmentation_output_path = 'segmentationFR.xlsx'
+    
+    # Nouveau lien de téléchargement des données de segmentation
+    segmentation_url = 'https://docs.google.com/spreadsheets/d/1Vv7n3pj3J7xDbsizmdWyw2ZF3oVQNBfu/export?format=xlsx'
+    segmentation_output_path = 'segmentation_all.xlsx'
+    
+    # Téléchargement des données de segmentation
     segmentation_data = download_segmentation_data(segmentation_url, segmentation_output_path)
+
+    # Liste des pays disponibles
+    countries = ['France', 'Belgique', 'US', 'UK']
+    selected_country = st.selectbox("Choisissez le pays :", options=countries)
+
+    # Zones disponibles
     zones = ['Toute France', 'Paris', 'Paris EST', 'Paris Ouest', 'Province']
     selected_zone = st.selectbox("Choisissez la zone :", options=zones)
+    
+    # Catégories de produits disponibles
     categories = ['Fruits et Légumes', 'Boucherie', 'Epicerie salée', 'Crémerie', 'Toutes catégories']
     selected_category = st.selectbox("Choisissez la catégorie :", options=categories)
-    months = ['avril', 'mai', 'juin', 'juillet', '3 last months']
-    selected_month = st.selectbox("Choisissez le mois :", options=months)
     
+    # Générer la liste des mois disponibles dynamiquement
+    months = pd.date_range(start="2024-01", end=pd.Timestamp.now(), freq='M').strftime('%B %Y').tolist()
+    months.extend(['3 derniers mois', 'Toute la base'])
+    selected_month = st.selectbox("Choisissez le mois :", options=months)
+
     if st.button("Lancer l'analyse"):
+        # Lien de téléchargement des données pour chaque pays
         file_urls = {
-            'France': 'https://docs.google.com/spreadsheets/d/1_qfuH19aLu3JMocit2-wSL-FCmWNet1I/export?format=xlsx'
+            'France': 'https://docs.google.com/spreadsheets/d/1sv6E1UsMV3fe-T_3p94uAUt1kz4xlXZA/export?format=xlsx',
+            'Belgique': 'https://docs.google.com/spreadsheets/d/1fqu_YgsovkDrpqV7OsFStusEvM-9axRg/export?format=xlsx',
+            'US': 'https://docs.google.com/spreadsheets/d/1HsxBxGpq3lSwJKPALDsDNvJXNi6us2j-/export?format=xlsx',
+            'UK': 'https://docs.google.com/spreadsheets/d/1ROT0ide8EQfgcWpXMY6Qnyp5nMKoLt-a/export?format=xlsx'
         }
         output_paths = {
-            'France': 'dataFR.xlsx'
+            'France': 'dataFR.xlsx',
+            'Belgique': 'dataBE.xlsx',
+            'US': 'dataUS.xlsx',
+            'UK': 'dataUK.xlsx'
         }
-        france_data = download_data(file_urls['France'], output_paths['France'])
-        france_data['Date'] = pd.to_datetime(france_data['Date'], errors='coerce')
-        st.write("Colonnes dans france_data:", france_data.columns)
-        st.write("Colonnes dans segmentation_data:", segmentation_data.columns)
         
-        if selected_zone != 'Toute France':
-            france_data = france_data[france_data['region'] == selected_zone]
-        if selected_category != 'Toutes catégories':
-            france_data = france_data[france_data['Product Category'] == selected_category]
-        
-        if selected_month == 'avril':
-            france_data = france_data[france_data['Date'].dt.month == 4]
-        elif selected_month == 'mai':
-            france_data = france_data[france_data['Date'].dt.month == 5]
-        elif selected_month == 'juin':
-            france_data = france_data[france_data['Date'].dt.month == 6]
-        elif selected_month == 'juillet':
-            france_data = france_data[france_data['Date'].dt.month == 7]
-        elif selected_month == '3 last months':
-            available_months = france_data['Date'].dt.month.unique()
-            if 7 in available_months:
-                france_data = france_data[france_data['Date'].dt.month.isin([5, 6, 7])]
-            else:
-                france_data = france_data[france_data['Date'].dt.month.isin([4, 5, 6])]
+        # Téléchargement des données pour le pays sélectionné
+        country_data = download_data(file_urls[selected_country], output_paths[selected_country])
+        country_data['Date'] = pd.to_datetime(country_data['Date'], errors='coerce')
 
-        merged_data = france_data.merge(segmentation_data, left_on='client_id', right_on='Restaurant_id')
+        # Filtrage par zone et catégorie si nécessaire
+        if selected_zone != 'Toute France':
+            country_data = country_data[country_data['region'] == selected_zone]
+        if selected_category != 'Toutes catégories':
+            country_data = country_data[country_data['Product Category'] == selected_category]
+        
+        # Filtrage par mois
+        if selected_month not in ['3 derniers mois', 'Toute la base']:
+            selected_month_num = pd.to_datetime(selected_month, format='%B %Y').month
+            country_data = country_data[country_data['Date'].dt.month == selected_month_num]
+        elif selected_month == '3 derniers mois':
+            available_months = country_data['Date'].dt.month.unique()
+            country_data = country_data[country_data['Date'].dt.month.isin(sorted(available_months)[-3:])]
+        
+        # Fusion des données avec la segmentation
+        merged_data = country_data.merge(segmentation_data, left_on='client_id', right_on='Restaurant_id')
         segment_counts = merged_data.groupby(['Gamme', 'Type']).size().unstack(fill_value=0)
+
+        # Génération d'un heatmap pour afficher les segments
         plt.figure(figsize=(10, 6))
         sns.heatmap(segment_counts, annot=True, fmt="d", cmap="YlGnBu")
         plt.title("Heatmap du nombre de clients pour chaque segment")
