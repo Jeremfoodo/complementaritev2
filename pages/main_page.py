@@ -74,9 +74,16 @@ def main_page():
 
             if st.button("Lancer l'analyse"):
                 category_data = data_region_selected[data_region_selected['Product Category'] == chosen_category].copy()
-                assert 'Date' in category_data.columns, "La colonne 'Date' n'est pas dans category_data"
+                if 'Date' not in category_data.columns:
+                    st.error("La colonne 'Date' est manquante dans les données.")
+                    return
+
                 transactions = process_data(category_data)
                 rules = apriori_rules(transactions)
+                
+                if rules.empty:
+                    st.warning("Aucune règle trouvée avec les paramètres actuels.")
+                    return
                 
                 # Prétraitement des règles pour affichage
                 rules['antecedents'] = rules['antecedents'].apply(lambda x: list(x))
