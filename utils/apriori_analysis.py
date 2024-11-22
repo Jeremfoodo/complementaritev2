@@ -1,48 +1,60 @@
-from mlxtend.preprocessing import TransactionEncoder
-from mlxtend.frequent_patterns import apriori, association_rules
+import pyfpgrowth
 import pandas as pd
 
-def apriori_rules(transactions, min_support=0.01, min_lift=1.2):
+def fpgrowth_rules(transactions, min_support=0.01, min_confidence=0.5):
     """
-    Extrait des règles d'association à partir des transactions.
-    
+    Extrait des règles d'association à partir des transactions en utilisant l'algorithme FP-Growth.
     Args:
     - transactions (list of lists): Liste de transactions contenant des ensembles de produits.
-    - min_support (float): Support minimum pour les itemsets fréquents.
-    - min_lift (float): Seuil minimum pour le lift des règles.
+    - min_support (float): Support minimum pour les règles (en pourcentage, ex: 0.01 pour 1%).
+    - min_confidence (float): Seuil minimum de confiance pour les règles.
     
     Returns:
-    - DataFrame: Tableau des règles d'association avec les colonnes pertinentes.
+    - DataFrame: Tableau des règles d'association avec les colonnes suivantes :
+        - Antecedents : Ensemble des produits déclencheurs.
+        - Consequents : Ensemble des produits associés.
+        - Confidence : Probabilité que le conséquent soit acheté si l'antécédent l'est.
+        - Support_consequent : Pourcentage d'apparition du conséquent dans toutes les transactions.
+        - Lift : Force de la relation entre l'antécédent et le conséquent.
     """
-    # Étape 1 : Encodage des transactions
-    encoder = TransactionEncoder()
-    onehot = encoder.fit_transform(transactions)
-    df_onehot = pd.DataFrame(onehot, columns=encoder.columns_)
+    # Étape 1 : Calcul du support minimum en absolu
+    min_support_count = int(min_support * len(transactions))
 
-    # Étape 2 : Extraction des itemsets fréquents
-    frequent_itemsets = apriori(df_onehot, min_support=min_support, use_colnames=True)
-    if frequent_itemsets.empty:
-        print("Aucun itemset fréquent trouvé avec les paramètres donnés.")
+    # Étape 2 : Extraction des motifs fréquents avec FP-Growth
+    patterns = pyfpgrowth.find_frequent_patterns(transactions, min_support_count)
+
+    if not patterns:
+        print("Aucun motif fréquent trouvé avec les paramètres donnés.")
         return pd.DataFrame()
 
-    # Étape 3 : Calcul de num_itemsets
-    num_itemsets = {
-        length: len(frequent_itemsets[frequent_itemsets['itemsets'].apply(len) == length])
-        for length in frequent_itemsets['itemsets'].apply(len).unique()
-    }
+    # Étape 3 : Génération des règles d'association
+    rules = pyfpgrowth.generate_association_rules(patterns, min_confidence)
 
-    # Étape 4 : Génération des règles d'association
-    rules = association_rules(frequent_itemsets, metric="lift", min_threshold=min_lift, num_itemsets=num_itemsets)
-    if rules.empty:
+    if not rules:
         print("Aucune règle trouvée avec les paramètres donnés.")
         return pd.DataFrame()
 
-    # Étape 5 : Sélection des colonnes importantes et tri des résultats
-    rules = rules[['antecedents', 'consequents', 'support', 'confidence', 'lift']]
-    rules = rules.sort_values(by=['lift', 'confidence'], ascending=[False, False])
-    
-    # Conversion des ensembles en listes pour affichage lisible
-    rules['antecedents'] = rules['antecedents'].apply(lambda x: list(x)[0] if len(x) == 1 else ', '.join(x))
-    rules['consequents'] = rules['consequents'].apply(lambda x: list(x)[0] if len(x) == 1 else ', '.join(x))
+    # Étape 4 : Calcul des métriques supplémentaires (lift, support_consequent)
+    total_transactions = len(transactions)
+    item_support = {item: count / total_transactions for item, count in patterns.items()}
 
-    return rules
+    enriched_rules = []
+    for antecedent, (consequent, confidence) in rules.items():
+        consequent_support = item_support[consequent[0]] if len(consequent) == 1 else sum(
+            item_support.get(item, 0) for item in consequent
+        )
+        lift = confidence / consequent_support if consequent_support > 0 else 0
+
+        enriched_rules.append({
+            'antecedents': antecedent,
+            'consequents': consequent,
+            'confidence': confidence,
+            'support_consequent': consequent_support,
+            'lift': lift
+        })
+
+    # Conversion en DataFrame et tri des résultats
+    rules_df = pd.DataFrame(enriched_rules)
+    rules_df['antecedents'] = rules_df['antecedents'].apply(lambda x: ', '.join(x) if isinstance(x, tuple) else x)
+    rules_df['consequents'] = rules_df['consequents'].apply(lambda x: ', '.join(x) if isinstance(x, tuple) else x)
+    return rules_df.sort_values(by=['lift', 'confidence'], ascending=[False, False])
