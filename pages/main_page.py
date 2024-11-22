@@ -46,22 +46,28 @@ def main_page():
     st.write("Données chargées :", data.head())
 
     # Vérification des colonnes nécessaires
-    if 'Product Category' not in data.columns or 'product_name' not in data.columns:
-        st.error("Colonnes nécessaires manquantes dans les données.")
+    required_columns = ['Product Category', 'product_name', 'Date']
+    missing_columns = [col for col in required_columns if col not in data.columns]
+    if missing_columns:
+        st.error(f"Les colonnes suivantes sont manquantes dans les données : {', '.join(missing_columns)}")
         return
 
     # Sélection de la catégorie
     categories = data['Product Category'].unique()
     chosen_category = st.selectbox("Choisissez la catégorie pour l'analyse :", options=categories)
 
-    # Filtrage des données
+    # Filtrage des données par catégorie
     data_filtered = data[data['Product Category'] == chosen_category]
 
     if data_filtered.empty:
         st.error("Aucune donnée disponible pour cette catégorie.")
         return
     else:
-        st.write("Transactions disponibles :", len(data_filtered))
+        st.write("Transactions disponibles pour la catégorie :", len(data_filtered))
+
+        # Sélection d'un produit spécifique
+        products = data_filtered['product_name'].value_counts().index.tolist()
+        chosen_product = st.selectbox("Choisissez le produit pour l'analyse :", options=products)
 
         # Groupement des transactions par date
         transactions = data_filtered.groupby('Date')['product_name'].apply(list).tolist()
@@ -70,10 +76,12 @@ def main_page():
         if st.button("Lancer l'analyse"):
             rules = fpgrowth_rules(transactions, min_support=0.02, min_confidence=0.5)
 
-            # Affichage des résultats
-            if rules.empty:
-                st.warning("Aucune règle trouvée avec les paramètres actuels.")
+            # Filtrer les règles contenant le produit choisi comme antécédent
+            rules_filtered = rules[rules['antecedents'].str.contains(chosen_product, case=False)]
+
+            if rules_filtered.empty:
+                st.warning(f"Aucune règle trouvée pour le produit {chosen_product}.")
             else:
-                st.write("Règles trouvées :")
-                st.dataframe(rules)
+                st.write(f"Règles trouvées pour le produit {chosen_product} :")
+                st.dataframe(rules_filtered)
 
