@@ -28,15 +28,18 @@ def apriori_rules(transactions, min_support=0.01, min_lift=1.2):
         st.warning("Aucun itemset fréquent trouvé avec les paramètres actuels.")
         return pd.DataFrame()
 
-    # Calcul de num_itemsets pour les règles d'association
-    frequent_itemsets['itemset_length'] = frequent_itemsets['itemsets'].apply(len)
+    # Calcul de num_itemsets
     num_itemsets = {
-        length: len(frequent_itemsets[frequent_itemsets['itemset_length'] == length])
-        for length in frequent_itemsets['itemset_length'].unique()
+        length: len(frequent_itemsets[frequent_itemsets['itemsets'].apply(len) == length])
+        for length in frequent_itemsets['itemsets'].apply(len).unique()
     }
 
     # Extraction des règles d'association
-    rules = association_rules(frequent_itemsets, metric="lift", min_threshold=min_lift, num_itemsets=num_itemsets)
+    try:
+        rules = association_rules(frequent_itemsets, metric="lift", min_threshold=min_lift, num_itemsets=num_itemsets)
+    except TypeError as e:
+        st.error(f"Erreur lors de l'extraction des règles : {e}")
+        return pd.DataFrame()
 
     # Vérification si des règles ont été générées
     if rules.empty:
