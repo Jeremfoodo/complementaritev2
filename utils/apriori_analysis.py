@@ -25,13 +25,19 @@ def apriori_rules(transactions, min_support=0.01, min_lift=1.2):
         print("Aucun itemset fréquent trouvé avec les paramètres donnés.")
         return pd.DataFrame()
 
-    # Étape 3 : Génération des règles d'association
-    rules = association_rules(frequent_itemsets, metric="lift", min_threshold=min_lift)
+    # Étape 3 : Calcul de num_itemsets
+    num_itemsets = {
+        length: len(frequent_itemsets[frequent_itemsets['itemsets'].apply(len) == length])
+        for length in frequent_itemsets['itemsets'].apply(len).unique()
+    }
+
+    # Étape 4 : Génération des règles d'association
+    rules = association_rules(frequent_itemsets, metric="lift", min_threshold=min_lift, num_itemsets=num_itemsets)
     if rules.empty:
         print("Aucune règle trouvée avec les paramètres donnés.")
         return pd.DataFrame()
 
-    # Étape 4 : Sélection des colonnes importantes et tri des résultats
+    # Étape 5 : Sélection des colonnes importantes et tri des résultats
     rules = rules[['antecedents', 'consequents', 'support', 'confidence', 'lift']]
     rules = rules.sort_values(by=['lift', 'confidence'], ascending=[False, False])
     
