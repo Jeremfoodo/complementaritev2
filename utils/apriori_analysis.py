@@ -11,7 +11,7 @@ def fpgrowth_rules(transactions, min_support=0.01, min_confidence=0.5):
     
     Returns:
     - DataFrame: Tableau des règles d'association avec les colonnes suivantes :
-        - Antecedents : Ensemble des produits déclencheurs.
+        - Antecedents : Ensemble des produits déclencheurs (uniques uniquement).
         - Consequents : Ensemble des produits associés.
         - Support_antecedent : Fréquence d'apparition de l'antécédent.
         - Support_consequent : Fréquence d'apparition du conséquent.
@@ -39,6 +39,12 @@ def fpgrowth_rules(transactions, min_support=0.01, min_confidence=0.5):
 
     enriched_rules = []
     for antecedent, (consequent, confidence) in rules.items():
+        # Ne garder que les antécédents uniques
+        if not isinstance(antecedent, tuple):
+            antecedent = (antecedent,)
+        if len(antecedent) > 1:
+            continue
+
         # Support combiné = Support des deux ensemble
         combined_support = patterns[tuple(sorted(set(antecedent).union(set(consequent))))] / total_transactions
 
@@ -52,7 +58,7 @@ def fpgrowth_rules(transactions, min_support=0.01, min_confidence=0.5):
         lift = confidence / consequent_support if consequent_support > 0 else 0
 
         enriched_rules.append({
-            'antecedents': ', '.join(antecedent) if isinstance(antecedent, tuple) else antecedent,
+            'antecedents': antecedent[0],  # Produit unique
             'consequents': ', '.join(consequent) if isinstance(consequent, tuple) else consequent,
             'support_antecedent': antecedent_support,
             'support_consequent': consequent_support,
