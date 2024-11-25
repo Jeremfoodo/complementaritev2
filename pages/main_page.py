@@ -65,19 +65,17 @@ def main_page():
     else:
         st.write("Transactions disponibles pour la catégorie :", len(data_filtered))
 
-        # Sélection d'un produit spécifique
-        products = data_filtered['product_name'].value_counts().index.tolist()
-        chosen_product = st.selectbox("Choisissez le produit pour l'analyse :", options=products)
-
         # Groupement des transactions par date
         transactions = data_filtered.groupby('Date')['product_name'].apply(list).tolist()
 
-        # Lancer l'analyse lorsque l'utilisateur clique sur le bouton
+        # Entrer le produit à analyser
+        chosen_product = st.text_input("Entrez le produit pour analyser les complémentarités :")
+
         if st.button("Lancer l'analyse"):
             rules = fpgrowth_rules(transactions, min_support=0.02, min_confidence=0.5)
 
             # Filtrer les règles contenant le produit choisi comme antécédent
-            rules_filtered = rules[rules['antecedents'].str.contains(chosen_product, case=False)]
+            rules_filtered = rules[rules['antecedents'].str.contains(chosen_product, case=False, na=False)]
 
             if rules_filtered.empty:
                 st.warning(f"Aucune règle trouvée pour le produit {chosen_product}.")
