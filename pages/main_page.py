@@ -4,20 +4,6 @@ import requests
 from io import BytesIO
 from utils.apriori_analysis import fpgrowth_rules
 
-def download_data(file_url):
-    """
-    Télécharge un fichier depuis une URL Google Drive et retourne un DataFrame.
-    """
-    try:
-        response = requests.get(file_url)
-        response.raise_for_status()
-        file_data = BytesIO(response.content)
-        data = pd.read_excel(file_data)
-        return data
-    except Exception as e:
-        st.error(f"Erreur lors du téléchargement des données : {e}")
-        return pd.DataFrame()
-
 def main_page():
     st.title("Analyse de Produits Complémentaires")
 
@@ -76,11 +62,13 @@ def main_page():
         chosen_product = st.selectbox("Choisissez un produit à analyser :", options=top_products)
 
         # Groupement des transactions par date
-        transactions = data_filtered.groupby('Date')['product_name'].apply(list).tolist()
+        transactions = data_filtered.groupby('Date')['product_name'].apply(lambda x: list(map(str, x))).tolist()
+        st.write("Exemple de transactions :", transactions[:5])  # Diagnostic
 
         # Lancer l'analyse lorsque l'utilisateur clique sur le bouton
         if st.button("Lancer l'analyse"):
-            rules = fpgrowth_rules(transactions, min_support=0.02, min_confidence=0.5)
+            rules = fpgrowth_rules(transactions, min_support=0.01, min_confidence=0.5)
+            st.write("Règles générées :", rules)  # Diagnostic
 
             # Filtrer les règles contenant uniquement un antécédent unique
             rules_filtered = rules[
