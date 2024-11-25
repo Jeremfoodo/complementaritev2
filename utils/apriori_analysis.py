@@ -2,19 +2,33 @@ import pyfpgrowth
 import pandas as pd
 
 def fpgrowth_rules(transactions, min_support=0.01, min_confidence=0.5):
+    """
+    Extrait des règles d'association à partir des transactions en utilisant FP-Growth.
+    Args:
+    - transactions (list of lists): Liste de transactions contenant des ensembles de produits.
+    - min_support (float): Support minimum pour les règles (en pourcentage, ex: 0.01 pour 1%).
+    - min_confidence (float): Seuil minimum de confiance pour les règles.
+    
+    Returns:
+    - DataFrame: Tableau des règles d'association avec les colonnes suivantes :
+        - Antecedents : Ensemble des produits déclencheurs.
+        - Consequents : Ensemble des produits associés.
+        - Support_antecedent : Fréquence d'apparition de l'antécédent.
+        - Support_consequent : Fréquence d'apparition du conséquent.
+        - Support_combined : Fréquence des transactions contenant l'antécédent et le conséquent.
+        - Lift : Indicateur de la force de la relation entre antécédent et conséquent.
+    """
     # Étape 1 : Calcul du support minimum en absolu
     min_support_count = int(min_support * len(transactions))
 
     # Étape 2 : Extraction des motifs fréquents avec FP-Growth
     patterns = pyfpgrowth.find_frequent_patterns(transactions, min_support_count)
-    print("Patterns fréquents :", patterns)  # Diagnostic
 
     if not patterns:
         return pd.DataFrame()
 
     # Étape 3 : Génération des règles d'association
     rules = pyfpgrowth.generate_association_rules(patterns, min_confidence)
-    print("Règles brutes générées :", rules)  # Diagnostic
 
     if not rules:
         return pd.DataFrame()
@@ -47,4 +61,3 @@ def fpgrowth_rules(transactions, min_support=0.01, min_confidence=0.5):
 
     rules_df = pd.DataFrame(enriched_rules)
     return rules_df.sort_values(by=['lift', 'confidence'], ascending=[False, False])
-
