@@ -4,6 +4,25 @@ import requests
 from io import BytesIO
 from utils.apriori_analysis import fpgrowth_rules
 
+def download_data(file_url):
+    """
+    Télécharge un fichier depuis une URL Google Drive et retourne un DataFrame.
+    """
+    try:
+        # Gestion des URL Google Drive
+        if "drive.google.com" in file_url and "id=" in file_url:
+            file_id = file_url.split("id=")[-1]
+            file_url = f"https://drive.google.com/uc?id={file_id}"
+
+        response = requests.get(file_url)
+        response.raise_for_status()
+        file_data = BytesIO(response.content)
+        data = pd.read_excel(file_data)
+        return data
+    except Exception as e:
+        st.error(f"Erreur lors du téléchargement des données : {e}")
+        return pd.DataFrame()
+
 def main_page():
     st.title("Analyse de Produits Complémentaires")
 
