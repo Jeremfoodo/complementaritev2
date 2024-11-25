@@ -1,85 +1,72 @@
-import streamlit as st
+import pyfpgrowth
 import pandas as pd
-import requests
-from io import BytesIO
-from utils.apriori_analysis import fpgrowth_rules
 
-def download_data(file_url):
+def fpgrowth_rules(transactions, min_support=0.01, min_confidence=0.5):
     """
-    Télécharge un fichier depuis une URL Google Drive et retourne un DataFrame.
+    Extrait des règles d'association à partir des transactions en utilisant FP-Growth.
+    Args:
+    - transactions (list of lists): Liste de transactions contenant des ensembles de produits.
+    - min_support (float): Support minimum pour les règles (en pourcentage, ex: 0.01 pour 1%).
+    - min_confidence (float): Seuil minimum de confiance pour les règles.
+    
+    Returns:
+    - DataFrame: Tableau des règles d'association avec les colonnes suivantes :
+        - Antecedents : Ensemble des produits déclencheurs (uniques uniquement).
+        - Consequents : Ensemble des produits associés.
+        - Support_antecedent : Fréquence d'apparition de l'antécédent.
+        - Support_consequent : Fréquence d'apparition du conséquent.
+        - Support_combined : Fréquence des transactions contenant l'antécédent et le conséquent.
+        - Lift : Indicateur de la force de la relation entre antécédent et conséquent.
     """
-    try:
-        response = requests.get(file_url)
-        response.raise_for_status()
-        file_data = BytesIO(response.content)
-        data = pd.read_excel(file_data)
-        return data
-    except Exception as e:
-        st.error(f"Erreur lors du téléchargement des données : {e}")
+    # Étape 1 : Calcul du support minimum en absolu
+    min_support_count = int(min_support * len(transactions))
+
+    # Étape 2 : Extraction des motifs fréquents avec FP-Growth
+    patterns = pyfpgrowth.find_frequent_patterns(transactions, min_support_count)
+
+    if not patterns:
         return pd.DataFrame()
 
-def main_page():
-    st.title("Analyse de Produits Complémentaires")
+    # Étape 3 : Génération des règles d'association
+    rules = pyfpgrowth.generate_association_rules(patterns, min_confidence)
 
-    # URLs des fichiers par pays
-    file_urls = {
-        'FR': 'https://drive.google.com/uc?id=1sv6E1UsMV3fe-T_3p94uAUt1kz4xlXZA',
-        'Belgium': 'https://drive.google.com/uc?id=1fqu_YgsovkDrpqV7OsFStusEvM-9axRg',
-        'UK': 'https://drive.google.com/uc?id=1ROT0ide8EQfgcWpXMY6Qnyp5nMKoLt-a',
-        'US': 'https://drive.google.com/uc?id=1HsxBxGpq3lSwJKPALDsDNvJXNi6us2j-'
-    }
+    if not rules:
+        return pd.DataFrame()
 
-    # Sélection du pays
-    user_country = st.selectbox("Choisissez le pays à analyser :", options=list(file_urls.keys()))
+    # Étape 4 : Calcul des métriques supplémentaires (lift, supports)
+    total_transactions = len(transactions)
+    item_support = {item: count / total_transactions for item, count in patterns.items()}
 
-    st.write(f"Téléchargement des données pour {user_country}...")
-    file_url = file_urls[user_country]
+    enriched_rules = []
+    for antecedent, (consequent, confidence) in rules.items():
+        # Ne garder que les antécédents uniques
+        if not isinstance(antecedent, tuple):
+            antecedent = (antecedent,)
+        if len(antecedent) > 1:
+            continue
 
-    # Téléchargement et chargement des données
-    data = download_data(file_url)
+        # Support combiné = Support des deux ensemble
+        combined_support = patterns[tuple(sorted(set(antecedent).union(set(consequent))))] / total_transactions
 
-    # Vérification des données
-    if data.empty:
-        st.error("Les données n'ont pas été correctement chargées pour ce pays.")
-        return
+        # Support de l'antécédent
+        antecedent_support = patterns[antecedent] / total_transactions if antecedent in patterns else 0
 
-    st.write("Données chargées :", data.head())
+        # Support du conséquent
+        consequent_support = patterns[consequent] / total_transactions if consequent in patterns else 0
 
-    # Vérification des colonnes nécessaires
-    required_columns = ['Product Category', 'product_name', 'Date']
-    missing_columns = [col for col in required_columns if col not in data.columns]
-    if missing_columns:
-        st.error(f"Les colonnes suivantes sont manquantes dans les données : {', '.join(missing_columns)}")
-        return
+        # Calcul du lift
+        lift = confidence / consequent_support if consequent_support > 0 else 0
 
-    # Sélection de la catégorie
-    categories = data['Product Category'].unique()
-    chosen_category = st.selectbox("Choisissez la catégorie pour l'analyse :", options=categories)
+        enriched_rules.append({
+            'antecedents': antecedent[0],  # Produit unique
+            'consequents': ', '.join(consequent) if isinstance(consequent, tuple) else consequent,
+            'support_antecedent': antecedent_support,
+            'support_consequent': consequent_support,
+            'support_combined': combined_support,
+            'confidence': confidence,
+            'lift': lift
+        })
 
-    # Filtrage des données par catégorie
-    data_filtered = data[data['Product Category'] == chosen_category]
-
-    if data_filtered.empty:
-        st.error("Aucune donnée disponible pour cette catégorie.")
-        return
-    else:
-        st.write("Transactions disponibles pour la catégorie :", len(data_filtered))
-
-        # Groupement des transactions par date
-        transactions = data_filtered.groupby('Date')['product_name'].apply(list).tolist()
-
-        # Entrer le produit à analyser
-        chosen_product = st.text_input("Entrez le produit pour analyser les complémentarités :")
-
-        if st.button("Lancer l'analyse"):
-            rules = fpgrowth_rules(transactions, min_support=0.02, min_confidence=0.5)
-
-            # Filtrer les règles contenant le produit choisi comme antécédent
-            rules_filtered = rules[rules['antecedents'].str.contains(chosen_product, case=False, na=False)]
-
-            if rules_filtered.empty:
-                st.warning(f"Aucune règle trouvée pour le produit {chosen_product}.")
-            else:
-                st.write(f"Règles trouvées pour le produit {chosen_product} :")
-                st.dataframe(rules_filtered)
-
+    # Conversion en DataFrame
+    rules_df = pd.DataFrame(enriched_rules)
+    return rules_df.sort_values(by=['lift', 'confidence'], ascending=[False, False])
