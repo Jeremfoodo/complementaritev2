@@ -1,29 +1,28 @@
 import gdown
 import pandas as pd
 from data.preprocess import load_and_preprocess
-import openpyxl
 
+@st.cache_data
 def download_data(url, output_path):
+    """
+    Télécharge et charge les données depuis une URL Google Drive.
+    Les données sont mises en cache pour éviter les téléchargements multiples.
+    """
     try:
+        # Télécharger les données
         gdown.download(url, output_path, quiet=False)
         print(f"Données téléchargées avec succès à {output_path}")
         
-        # Vérifier si le fichier existe et n'est pas vide
-        if pd.read_excel(output_path).empty:
+        # Charger les données
+        data = pd.read_excel(output_path)
+        if data.empty:
             print(f"Le fichier {output_path} est vide ou corrompu.")
             return pd.DataFrame()
         
-        data = load_and_preprocess(output_path)
+        # Prétraitement
+        data = load_and_preprocess(data)
         print("Données chargées et prétraitées avec succès")
         return data
     except Exception as e:
         print(f"Erreur lors du téléchargement des données : {e}")
-        return pd.DataFrame()
-
-def download_segmentation_data(url, output_path):
-    try:
-        gdown.download(url, output_path, quiet=False)
-        return pd.read_excel(output_path)
-    except Exception as e:
-        print(f"Erreur lors du téléchargement des données de segmentation : {e}")
         return pd.DataFrame()
