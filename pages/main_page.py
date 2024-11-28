@@ -48,6 +48,16 @@ def calculate_top_products(data, category):
 def main_page():
     st.title("Analyse des données - Top produits par catégorie")
 
+    # Utilisation de st.session_state pour conserver l'état des données et des sélections
+    if 'data' not in st.session_state:
+        st.session_state['data'] = None
+    if 'error_message' not in st.session_state:
+        st.session_state['error_message'] = None
+    if 'selected_category' not in st.session_state:
+        st.session_state['selected_category'] = None
+    if 'top_products' not in st.session_state:
+        st.session_state['top_products'] = None
+
     # URL à tester
     url = st.text_input(
         "Entrez l'URL Google Drive du fichier :",
@@ -60,27 +70,38 @@ def main_page():
         
         # Appel de la fonction pour charger les données
         data, error_message = load_data(url)
+        st.session_state['data'] = data
+        st.session_state['error_message'] = error_message
+        st.session_state['selected_category'] = None  # Réinitialiser la sélection
+
+    # Vérification des données chargées
+    if st.session_state['error_message']:
+        st.error(st.session_state['error_message'])
+        return
+
+    if st.session_state['data'] is not None:
+        st.success("Les données ont été chargées avec succès !")
+        st.write("Les premières lignes des données :")
+        st.write(st.session_state['data'].head())
         
-        if error_message:
-            st.error(error_message)
-            return
-        else:
-            st.success("Les données ont été chargées avec succès !")
-            st.write("Les premières lignes des données :")
-            st.write(data.head())
-            
-            # Étape 1 : Sélection de la catégorie
-            st.subheader("Étape 1 : Choisissez une catégorie de produit")
-            product_categories = data['Product Category'].dropna().unique()
-            selected_category = st.selectbox("Sélectionnez une catégorie :", options=product_categories)
+        # Étape 1 : Sélection de la catégorie
+        st.subheader("Étape 1 : Choisissez une catégorie de produit")
+        product_categories = st.session_state['data']['Product Category'].dropna().unique()
+        selected_category = st.selectbox(
+            "Sélectionnez une catégorie :",
+            options=product_categories,
+            index=0 if st.session_state['selected_category'] is None else list(product_categories).index(st.session_state['selected_category'])
+        )
 
-            if st.button("Valider la catégorie"):
-                # Étape 2 : Calculer le top 30 des produits
-                st.write(f"Calcul du top 30 des produits pour la catégorie : {selected_category}")
-                top_products = calculate_top_products(data, selected_category)
+        if st.button("Valider la catégorie"):
+            st.session_state['selected_category'] = selected_category
 
-                if not top_products.empty:
-                    st.write("Voici le top 30 des produits (par fréquence) :")
-                    st.dataframe(top_products)
-                else:
-                    st.warning(f"Aucun produit trouvé pour la catégorie {selected_category}.")
+            # Étape 2 : Calculer le top 30 des produits
+            st.write(f"Calcul du top 30 des produits pour la catégorie : {selected_category}")
+            top_products = calculate_top_products(st.session_state['data'], selected_category)
+            st.session_state['top_products'] = top_products
+
+        # Afficher le top 30 s'il est déjà calculé
+        if st.session_state['top_products'] is not None:
+            st.write("Voici le top 30 des produits (par fréquence) :")
+            st.dataframe(st.session_state['top_products'])
