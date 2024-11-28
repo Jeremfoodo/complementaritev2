@@ -50,29 +50,45 @@ def get_association_rules(data, selected_product, min_support=0.01, min_confiden
     """
     Génère des règles d'association pour identifier les produits complémentaires.
     """
-    # Regrouper les transactions
-    transactions = data.groupby('order_id')['product_name'].apply(list)
+    try:
+        # Regrouper les transactions
+        transactions = data.groupby('order_id')['product_name'].apply(list)
+        st.write("Exemple de transactions (premières lignes) :", transactions.head())
 
-    # Convertir en un DataFrame One-Hot Encoded
-    one_hot = pd.get_dummies(transactions.apply(pd.Series).stack()).groupby(level=0).sum()
+        # Convertir en un DataFrame One-Hot Encoded
+        one_hot = pd.get_dummies(transactions.apply(pd.Series).stack()).groupby(level=0).sum()
+        st.write("Exemple de One-Hot Encoding :", one_hot.head())
 
-    # Calcul des motifs fréquents
-    frequent_itemsets = apriori(one_hot, min_support=min_support, use_colnames=True)
+        # Calcul des motifs fréquents
+        frequent_itemsets = apriori(one_hot, min_support=min_support, use_colnames=True)
+        if frequent_itemsets.empty:
+            st.warning("Aucun motif fréquent trouvé. Essayez de réduire les seuils.")
+            return pd.DataFrame()
+        
+        st.write("Motifs fréquents (premières lignes) :", frequent_itemsets.head())
 
-    # Génération des règles d'association
-    rules = association_rules(frequent_itemsets, metric="confidence", min_threshold=min_confidence)
+        # Génération des règles d'association
+        rules = association_rules(frequent_itemsets, metric="confidence", min_threshold=min_confidence)
+        if rules.empty:
+            st.warning("Aucune règle d'association générée.")
+            return pd.DataFrame()
+        
+        st.write("Règles d'association générées (premières lignes) :", rules.head())
 
-    # Ajouter une métrique pour le pourcentage de commandes contenant les deux produits
-    rules['support_combined'] = rules['support'] * len(transactions)
+        # Ajouter une métrique pour le pourcentage de commandes contenant les deux produits
+        rules['support_combined'] = rules['support'] * len(transactions)
 
-    # Filtrer les règles pour lesquelles l'antécédent est le produit sélectionné
-    filtered_rules = rules[rules['antecedents'].apply(lambda x: selected_product in x)]
+        # Filtrer les règles pour lesquelles l'antécédent est le produit sélectionné
+        filtered_rules = rules[rules['antecedents'].apply(lambda x: selected_product in x)]
 
-    # Reformater les résultats pour un affichage clair
-    results = filtered_rules[['antecedents', 'consequents', 'support', 'confidence', 'lift', 'support_combined']].copy()
-    results['antecedents'] = results['antecedents'].apply(lambda x: ', '.join(list(x)))
-    results['consequents'] = results['consequents'].apply(lambda x: ', '.join(list(x)))
-    return results.sort_values(by='lift', ascending=False).head(50)
+        # Reformater les résultats pour un affichage clair
+        results = filtered_rules[['antecedents', 'consequents', 'support', 'confidence', 'lift', 'support_combined']].copy()
+        results['antecedents'] = results['antecedents'].apply(lambda x: ', '.join(list(x)))
+        results['consequents'] = results['consequents'].apply(lambda x: ', '.join(list(x)))
+        return results.sort_values(by='lift', ascending=False).head(50)
+    except Exception as e:
+        st.error(f"Erreur lors de l'analyse des produits complémentaires : {e}")
+        return pd.DataFrame()
 
 def main_page():
     st.title("Analyse des données - Produits complémentaires")
