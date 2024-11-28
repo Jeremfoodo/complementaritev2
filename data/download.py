@@ -27,3 +27,24 @@ def download_data(url, output_path):
     except Exception as e:
         print(f"Erreur lors du téléchargement des données : {e}")
         return pd.DataFrame()
+
+import gdown
+import pandas as pd
+import streamlit as st
+
+@st.cache_data
+def download_segmentation_data(url, output_path):
+    """
+    Télécharge et charge les données de segmentation depuis une URL.
+    """
+    try:
+        # Télécharger le fichier
+        gdown.download(url, output_path, quiet=False)
+        print(f"Données de segmentation téléchargées avec succès à {output_path}")
+        
+        # Charger les données
+        data = pd.read_excel(output_path)
+        return data
+    except Exception as e:
+        print(f"Erreur lors du téléchargement des données de segmentation : {e}")
+        return pd.DataFrame()
