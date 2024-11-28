@@ -2,8 +2,6 @@ import streamlit as st
 from streamlit_option_menu import option_menu
 from pages.main_page import main_page
 
-st.set_option('server.enableCORS', False)
-st.set_option('client.showErrorDetails', True)
 
 
 # Configuration de la page principale
