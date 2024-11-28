@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import gdown
+from mlxtend.frequent_patterns import apriori, association_rules
 
 @st.cache_data
 def load_data(url):
@@ -45,8 +46,36 @@ def calculate_top_products(data, category):
     # Renvoyer les 30 meilleurs produits
     return product_frequency_percentage.head(30)
 
+def get_association_rules(data, selected_product, min_support=0.01, min_confidence=0.5):
+    """
+    Génère des règles d'association pour identifier les produits complémentaires.
+    """
+    # Regrouper les transactions
+    transactions = data.groupby('order_id')['product_name'].apply(list)
+
+    # Convertir en un DataFrame One-Hot Encoded
+    one_hot = pd.get_dummies(transactions.apply(pd.Series).stack()).sum(level=0)
+
+    # Calcul des motifs fréquents
+    frequent_itemsets = apriori(one_hot, min_support=min_support, use_colnames=True)
+
+    # Génération des règles d'association
+    rules = association_rules(frequent_itemsets, metric="confidence", min_threshold=min_confidence)
+
+    # Ajouter une métrique pour le pourcentage de commandes contenant les deux produits
+    rules['support_combined'] = rules['support'] * len(transactions)
+
+    # Filtrer les règles pour lesquelles l'antécédent est le produit sélectionné
+    filtered_rules = rules[rules['antecedents'].apply(lambda x: selected_product in x)]
+
+    # Reformater les résultats pour un affichage clair
+    results = filtered_rules[['antecedents', 'consequents', 'support', 'confidence', 'lift', 'support_combined']].copy()
+    results['antecedents'] = results['antecedents'].apply(lambda x: ', '.join(list(x)))
+    results['consequents'] = results['consequents'].apply(lambda x: ', '.join(list(x)))
+    return results.sort_values(by='lift', ascending=False).head(50)
+
 def main_page():
-    st.title("Analyse des données - Top produits par catégorie")
+    st.title("Analyse des données - Produits complémentaires")
 
     # Utilisation de st.session_state pour conserver l'état des données et des sélections
     if 'data' not in st.session_state:
@@ -57,6 +86,10 @@ def main_page():
         st.session_state['selected_category'] = None
     if 'top_products' not in st.session_state:
         st.session_state['top_products'] = None
+    if 'selected_product' not in st.session_state:
+        st.session_state['selected_product'] = None
+    if 'association_rules' not in st.session_state:
+        st.session_state['association_rules'] = None
 
     # URL à tester
     url = st.text_input(
@@ -73,6 +106,8 @@ def main_page():
         st.session_state['data'] = data
         st.session_state['error_message'] = error_message
         st.session_state['selected_category'] = None  # Réinitialiser la sélection
+        st.session_state['selected_product'] = None
+        st.session_state['association_rules'] = None
 
     # Vérification des données chargées
     if st.session_state['error_message']:
@@ -95,13 +130,31 @@ def main_page():
 
         if st.button("Valider la catégorie"):
             st.session_state['selected_category'] = selected_category
+            # Calculer le top 30 des produits
+            st.session_state['top_products'] = calculate_top_products(st.session_state['data'], selected_category)
 
-            # Étape 2 : Calculer le top 30 des produits
-            st.write(f"Calcul du top 30 des produits pour la catégorie : {selected_category}")
-            top_products = calculate_top_products(st.session_state['data'], selected_category)
-            st.session_state['top_products'] = top_products
-
-        # Afficher le top 30 s'il est déjà calculé
+        # Afficher le top 30 des produits s'il est calculé
         if st.session_state['top_products'] is not None:
             st.write("Voici le top 30 des produits (par fréquence) :")
             st.dataframe(st.session_state['top_products'])
+
+            # Étape 2 : Sélection d'un produit pour l'analyse
+            st.subheader("Étape 2 : Sélectionnez un produit pour analyser ses compléments")
+            top_products_list = st.session_state['top_products']['product_name'].tolist()
+            selected_product = st.selectbox(
+                "Choisissez un produit :",
+                options=top_products_list,
+                index=0 if st.session_state['selected_product'] is None else top_products_list.index(st.session_state['selected_product'])
+            )
+
+            if st.button("Analyser les produits complémentaires"):
+                st.session_state['selected_product'] = selected_product
+                st.session_state['association_rules'] = get_association_rules(
+                    st.session_state['data'],
+                    selected_product
+                )
+
+            # Afficher les résultats des produits complémentaires
+            if st.session_state['association_rules'] is not None:
+                st.write(f"Produits complémentaires pour : {st.session_state['selected_product']}")
+                st.dataframe(st.session_state['association_rules'])
