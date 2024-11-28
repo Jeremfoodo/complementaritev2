@@ -1,59 +1,46 @@
 import streamlit as st
-from utils.apriori_analysis import fpgrowth_rules
-from data.download import download_data
+import pandas as pd
+import gdown
 
-# URLs des fichiers par pays
-FILE_URLS = {
-    'FR': 'https://drive.google.com/uc?id=1sv6E1UsMV3fe-T_3p94uAUt1kz4xlXZA',
-    'Belgium': 'https://drive.google.com/uc?id=1fqu_YgsovkDrpqV7OsFStusEvM-9axRg',
-    'UK': 'https://drive.google.com/uc?id=1ROT0ide8EQfgcWpXMY6Qnyp5nMKoLt-a',
-    'US': 'https://drive.google.com/uc?id=1HsxBxGpq3lSwJKPALDsDNvJXNi6us2j-'
-}
+@st.cache_data
+def load_data(url):
+    """
+    Télécharge les données depuis une URL Google Drive, les charge dans un DataFrame et les met en cache.
+    """
+    try:
+        # Affiche l'URL en cours d'utilisation
+        print(f"Téléchargement depuis : {url}")
+        
+        # Téléchargement du fichier
+        output_path = "data.xlsx"
+        gdown.download(url, output_path, quiet=False)
 
-def main_page():
-    st.title("Analyse de Produits Complémentaires")
+        # Chargement des données
+        data = pd.read_excel(output_path)
+        
+        # Vérification si les données sont vides
+        if data.empty:
+            return None, "Le fichier est vide ou ne contient pas de données exploitables."
+        
+        return data, None  # Aucun problème
+    except Exception as e:
+        return None, f"Erreur lors du téléchargement ou du chargement des données : {e}"
 
-    # Sélection du pays
-    user_country = st.selectbox("Choisissez un pays :", options=list(FILE_URLS.keys()))
+# Application Streamlit
+st.title("Chargement des données")
 
-    # Téléchargement et chargement des données (mise en cache activée)
-    with st.spinner("Téléchargement des données..."):
-        data = download_data(FILE_URLS[user_country], f"{user_country}_data.xlsx")
+# URL à tester
+url = st.text_input("Entrez l'URL Google Drive du fichier :", value="https://drive.google.com/uc?id=1sv6E1UsMV3fe-T_3p94uAUt1kz4xlXZA")
 
-    # Vérification des données
-    if data.empty:
-        st.error("Les données n'ont pas été correctement chargées pour ce pays.")
-        return
-
-    st.write("Données chargées :", data.head())
-
-    # Sélection de la catégorie
-    categories = data['Product Category'].dropna().unique()
-    chosen_category = st.selectbox("Choisissez une catégorie de produit :", options=categories)
-
-    # Filtrer les données par catégorie
-    data_filtered = data[data['Product Category'] == chosen_category]
-
-    # Récupérer les 30 produits les plus fréquents
-    top_products = (
-        data_filtered['product_name']
-        .value_counts()
-        .nlargest(30)
-        .sort_index()
-        .index.tolist()
-    )
-    chosen_product = st.selectbox("Choisissez un produit :", options=top_products)
-
-    # Transactions par commande
-    transactions = data_filtered.groupby('order_id')['product_name'].apply(list).tolist()
-
-    # Analyse avec FP-Growth
-    if st.button("Lancer l'analyse"):
-        rules = fpgrowth_rules(transactions, min_support=0.01, min_confidence=0.5)
-
-        if rules.empty:
-            st.warning(f"Aucune règle trouvée pour le produit {chosen_product}.")
-        else:
-            rules_filtered = rules[rules['antecedents'] == chosen_product]
-            st.write(f"Règles trouvées pour le produit {chosen_product} :")
-            st.dataframe(rules_filtered)
+if st.button("Charger les données"):
+    st.write("Tentative de chargement des données...")
+    st.write(f"URL utilisée pour le téléchargement : {url}")
+    
+    # Appel de la fonction pour charger les données
+    data, error_message = load_data(url)
+    
+    if error_message:
+        st.error(error_message)
+    else:
+        st.success("Les données ont été chargées avec succès !")
+        st.write(data.head())  # Affiche les premières lignes du DataFrame
