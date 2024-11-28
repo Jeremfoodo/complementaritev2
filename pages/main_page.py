@@ -1,6 +1,4 @@
 import streamlit as st
-import pandas as pd
-from io import BytesIO
 from utils.apriori_analysis import fpgrowth_rules
 from data.download import download_data
 
@@ -18,8 +16,9 @@ def main_page():
     # Sélection du pays
     user_country = st.selectbox("Choisissez un pays :", options=list(FILE_URLS.keys()))
 
-    # Téléchargement et chargement des données
-    data = download_data(FILE_URLS[user_country], f"{user_country}_data.xlsx")
+    # Téléchargement et chargement des données (mise en cache activée)
+    with st.spinner("Téléchargement des données..."):
+        data = download_data(FILE_URLS[user_country], f"{user_country}_data.xlsx")
 
     # Vérification des données
     if data.empty:
