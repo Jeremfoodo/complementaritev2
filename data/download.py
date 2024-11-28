@@ -3,30 +3,31 @@ import pandas as pd
 import streamlit as st
 from data.preprocess import load_and_preprocess
 
+import tempfile
+
 @st.cache_data
-def download_data(url, output_path):
+def download_data(url):
     """
     Télécharge et charge les données depuis une URL Google Drive.
-    Les données sont mises en cache pour éviter les téléchargements multiples.
     """
     try:
-        # Télécharger les données
-        gdown.download(url, output_path, quiet=False)
-        print(f"Données téléchargées avec succès à {output_path}")
-        
-        # Charger les données
-        data = pd.read_excel(output_path)
-        if data.empty:
-            print(f"Le fichier {output_path} est vide ou corrompu.")
-            return pd.DataFrame()
-        
-        # Prétraitement
-        data = load_and_preprocess(data)
-        print("Données chargées et prétraitées avec succès")
-        return data
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".xlsx") as tmp_file:
+            gdown.download(url, tmp_file.name, quiet=False)
+            print(f"Données téléchargées temporairement à {tmp_file.name}")
+            
+            # Charger les données
+            data = pd.read_excel(tmp_file.name)
+            
+            if data.empty:
+                print("Le fichier téléchargé est vide ou corrompu.")
+                return pd.DataFrame()
+            
+            print("Données chargées avec succès")
+            return data
     except Exception as e:
-        print(f"Erreur lors du téléchargement des données : {e}")
+        print(f"Erreur lors du téléchargement ou du chargement des données : {e}")
         return pd.DataFrame()
+
 
 import gdown
 import pandas as pd
