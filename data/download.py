@@ -1,5 +1,6 @@
 import gdown
 import pandas as pd
+import streamlit as st
 from data.preprocess import load_and_preprocess
 
 @st.cache_data
