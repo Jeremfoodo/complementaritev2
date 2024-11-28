@@ -54,7 +54,7 @@ def get_association_rules(data, selected_product, min_support=0.01, min_confiden
     transactions = data.groupby('order_id')['product_name'].apply(list)
 
     # Convertir en un DataFrame One-Hot Encoded
-    one_hot = pd.get_dummies(transactions.apply(pd.Series).stack()).sum(level=0)
+    one_hot = pd.get_dummies(transactions.apply(pd.Series).stack()).groupby(level=0).sum()
 
     # Calcul des motifs fréquents
     frequent_itemsets = apriori(one_hot, min_support=min_support, use_colnames=True)
