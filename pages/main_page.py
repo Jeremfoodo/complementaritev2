@@ -1,7 +1,6 @@
 import streamlit as st
 import pandas as pd
 import gdown
-from mlxtend.frequent_patterns import apriori, association_rules
 
 @st.cache_data
 def load_data(url):
@@ -46,46 +45,42 @@ def calculate_top_products(data, category):
     # Renvoyer les 30 meilleurs produits
     return product_frequency_percentage.head(30)
 
-def get_association_rules(data, selected_product, min_support=0.01, min_confidence=0.5):
+def get_association_rules_optimized(data, selected_product):
     """
-    Génère des règles d'association pour identifier les produits complémentaires.
+    Analyse optimisée des produits complémentaires.
     """
     try:
-        # Regrouper les transactions
-        transactions = data.groupby('order_id')['product_name'].apply(list)
-        st.write("Exemple de transactions (premières lignes) :", transactions.head())
+        # Étape 1 : Filtrer les commandes contenant le produit sélectionné
+        selected_orders = data[data['product_name'] == selected_product]['order_id'].unique()
+        transactions_with_product = data[data['order_id'].isin(selected_orders)]
+        transactions_without_product = data[~data['order_id'].isin(selected_orders)]
 
-        # Convertir en un DataFrame One-Hot Encoded
-        one_hot = pd.get_dummies(transactions.apply(pd.Series).stack()).groupby(level=0).sum()
-        st.write("Exemple de One-Hot Encoding :", one_hot.head())
+        # Étape 2 : Calculer la fréquence des produits
+        frequency_with = (
+            transactions_with_product.groupby('product_name')['order_id']
+            .nunique()
+            .sort_values(ascending=False)
+        )
+        frequency_without = (
+            transactions_without_product.groupby('product_name')['order_id']
+            .nunique()
+            .sort_values(ascending=False)
+        )
 
-        # Calcul des motifs fréquents
-        frequent_itemsets = apriori(one_hot, min_support=min_support, use_colnames=True)
-        if frequent_itemsets.empty:
-            st.warning("Aucun motif fréquent trouvé. Essayez de réduire les seuils.")
-            return pd.DataFrame()
-        
-        st.write("Motifs fréquents (premières lignes) :", frequent_itemsets.head())
+        # Étape 3 : Comparer les fréquences
+        frequency_df = pd.DataFrame({
+            'frequency_with': frequency_with,
+            'frequency_without': frequency_without
+        }).fillna(0)
 
-        # Génération des règles d'association
-        rules = association_rules(frequent_itemsets, metric="confidence", min_threshold=min_confidence)
-        if rules.empty:
-            st.warning("Aucune règle d'association générée.")
-            return pd.DataFrame()
-        
-        st.write("Règles d'association générées (premières lignes) :", rules.head())
+        # Calculer le Lift
+        frequency_df['lift'] = frequency_df['frequency_with'] / (frequency_df['frequency_without'] + 1e-6)
 
-        # Ajouter une métrique pour le pourcentage de commandes contenant les deux produits
-        rules['support_combined'] = rules['support'] * len(transactions)
-
-        # Filtrer les règles pour lesquelles l'antécédent est le produit sélectionné
-        filtered_rules = rules[rules['antecedents'].apply(lambda x: selected_product in x)]
-
-        # Reformater les résultats pour un affichage clair
-        results = filtered_rules[['antecedents', 'consequents', 'support', 'confidence', 'lift', 'support_combined']].copy()
-        results['antecedents'] = results['antecedents'].apply(lambda x: ', '.join(list(x)))
-        results['consequents'] = results['consequents'].apply(lambda x: ', '.join(list(x)))
-        return results.sort_values(by='lift', ascending=False).head(50)
+        # Étape 4 : Trier et retourner les résultats
+        results = frequency_df.sort_values(by='lift', ascending=False).reset_index()
+        results.rename(columns={'index': 'product_name'}, inplace=True)
+        results = results[results['product_name'] != selected_product]  # Exclure le produit lui-même
+        return results.head(50)
     except Exception as e:
         st.error(f"Erreur lors de l'analyse des produits complémentaires : {e}")
         return pd.DataFrame()
@@ -165,7 +160,7 @@ def main_page():
 
             if st.button("Analyser les produits complémentaires"):
                 st.session_state['selected_product'] = selected_product
-                st.session_state['association_rules'] = get_association_rules(
+                st.session_state['association_rules'] = get_association_rules_optimized(
                     st.session_state['data'],
                     selected_product
                 )
